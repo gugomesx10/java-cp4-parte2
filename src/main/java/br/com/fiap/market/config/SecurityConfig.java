@@ -1,9 +1,12 @@
 package br.com.fiap.market.config;
 
 
+import br.com.fiap.market.enums.AuthProvider;
 import br.com.fiap.market.repository.UsuarioRepository;
+import br.com.fiap.market.service.OAuth2UsuarioService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.http.HttpMethod;
@@ -14,10 +17,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity (prePostEnabled = true)
 public class SecurityConfig {
 
     @Value("${app.admin.username}")
@@ -32,7 +38,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http)
+    SecurityFilterChain securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http,
+                                            OAuth2UsuarioService oAuth2UsuarioService)
             throws Exception {
         http
                 .csrf(withDefaults())
@@ -42,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/cadastro").permitAll()
                         .requestMatchers(HttpMethod.POST, "/cadastro").permitAll()
                         .requestMatchers("/acesso-negado").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/login/oauth2/**").permitAll()
                         // mvc que e o foco do cp1 parte 2
                         .requestMatchers(HttpMethod.GET, "/itens").permitAll()
                         .requestMatchers(HttpMethod.GET, "/itens/novo").hasRole("ADMIN")
@@ -51,7 +60,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/itens/{id}/excluir").hasRole("ADMIN")
                         // agora as api antiga
                         .requestMatchers(HttpMethod.GET, "/mercado", "/mercado/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/mercado/{id}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/mercado").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/mercado/{id}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/mercado/{id}").hasRole("ADMIN")
@@ -63,11 +71,40 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/itens", true)
                         .permitAll()
                 )
+                .oauth2Login(oauth -> oauth
+                        .loginPage("/login")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UsuarioService)
+                        )
+                        .defaultSuccessUrl("/itens", true)
+                )
                 .exceptionHandling(exception -> exception
                         .accessDeniedPage("/acesso-negado")
                 )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
+                )
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives(
+                                        "default-src 'self'; " +
+                                        "script-src 'self'; " +
+                                        "style-src 'self'; " +
+                                        "img-src 'self'; " +
+                                        "object-src 'none'; " +
+                                        "base-uri 'self'; " +
+                                        "frame-ancestors 'none'"
+                                )
+                        )
+                        .referrerPolicy(referrer -> referrer
+                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)
+                        ).permissionsPolicyHeader(permissions -> permissions
+                                .policy(
+                                        "camera=(), " +
+                                        "microphone=(), " +
+                                        "geolocation=()"
+                                )
+                        )
                 );
 
         return http.build();
@@ -86,7 +123,7 @@ public class SecurityConfig {
             if (username.equals(adminUsername)) {
                 return user;
             } else {
-                return usuarioRepository.findByUsername(username)
+                return usuarioRepository.findByUsernameAndProvider(username, AuthProvider.LOCAL)
                         .map(usuario -> User.builder()
                                 .username(usuario.getUsername())
                                 .password(usuario.getSenha())

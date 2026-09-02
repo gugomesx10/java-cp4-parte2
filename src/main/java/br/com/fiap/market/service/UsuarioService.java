@@ -1,8 +1,8 @@
 package br.com.fiap.market.service;
 
 import br.com.fiap.market.dto.UsuarioCadastroDTO;
-import br.com.fiap.market.entity.Item;
 import br.com.fiap.market.entity.Usuario;
+import br.com.fiap.market.enums.AuthProvider;
 import br.com.fiap.market.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +29,7 @@ public class UsuarioService {
         usuario.setUsername(dto.getUsername());
         usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
         usuario.setRole("USER");
+        usuario.setProvider(AuthProvider.LOCAL);
 
         usuarioRepository.save(usuario);
     }
