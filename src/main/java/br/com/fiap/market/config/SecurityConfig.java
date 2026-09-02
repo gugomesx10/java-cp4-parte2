@@ -4,6 +4,7 @@ package br.com.fiap.market.config;
 import br.com.fiap.market.repository.UsuarioRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.http.HttpMethod;
@@ -18,6 +19,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity (prePostEnabled = true)
 public class SecurityConfig {
 
     @Value("${app.admin.username}")
@@ -51,7 +53,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/itens/{id}/excluir").hasRole("ADMIN")
                         // agora as api antiga
                         .requestMatchers(HttpMethod.GET, "/mercado", "/mercado/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/mercado/{id}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/mercado").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/mercado/{id}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/mercado/{id}").hasRole("ADMIN")
