@@ -4,8 +4,10 @@ package br.com.fiap.market.service;
 import br.com.fiap.market.dto.ItemRequestDTO;
 import br.com.fiap.market.dto.ItemResponseDTO;
 import br.com.fiap.market.entity.Item;
+import br.com.fiap.market.exception.ItemNotFoundException;
 import br.com.fiap.market.repository.ItemRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
 
@@ -18,6 +20,7 @@ public class ItemService {
     private final ItemRepository itemRepository;
 
     // aqui é cadastro, blzzz??
+    @PreAuthorize("hasRole('ADMIN')")
     public ItemResponseDTO cadastrarItem(ItemRequestDTO dto) {
         Item item = toEntity(dto);
 
@@ -36,15 +39,16 @@ public class ItemService {
     // agora faz a busca por id
     public ItemResponseDTO buscarItemPorId(Long id) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item não encontrado com o id: " + id));
+                .orElseThrow(() -> new ItemNotFoundException(id));
 
         return toResponseDTO(item);
     }
 
     // atualizar o produto
+    @PreAuthorize("hasRole('ADMIN')")
     public ItemResponseDTO atualizarItem(Long id, ItemRequestDTO dto) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item não encontrado com o id: " + id));
+                .orElseThrow(() -> new ItemNotFoundException(id));
 
         item.setNome(dto.getNome());
         item.setTipo(dto.getTipo());
@@ -58,9 +62,10 @@ public class ItemService {
     }
 
     // atualizar por parte - PATCH
+    @PreAuthorize("hasRole('ADMIN')")
     public ItemResponseDTO atualizarParcial(Long id, ItemRequestDTO dto) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item não encontrado"));
+                .orElseThrow(() -> new ItemNotFoundException(id));
 
         if (dto.getNome() != null) {
             item.setNome(dto.getNome());
@@ -88,9 +93,10 @@ public class ItemService {
     }
 
     // excluir o produto
+    @PreAuthorize("hasRole('ADMIN')")
     public void excluirItem(Long id) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item não encontrado"));
+                .orElseThrow(() -> new ItemNotFoundException(id));
 
         itemRepository.delete(item);
     }
