@@ -1,7 +1,9 @@
 package br.com.fiap.market.config;
 
 
+import br.com.fiap.market.enums.AuthProvider;
 import br.com.fiap.market.repository.UsuarioRepository;
+import br.com.fiap.market.service.OAuth2UsuarioService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -36,7 +38,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http)
+    SecurityFilterChain securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http,
+                                            OAuth2UsuarioService oAuth2UsuarioService)
             throws Exception {
         http
                 .csrf(withDefaults())
@@ -46,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/cadastro").permitAll()
                         .requestMatchers(HttpMethod.POST, "/cadastro").permitAll()
                         .requestMatchers("/acesso-negado").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/login/oauth2/**").permitAll()
                         // mvc que e o foco do cp1 parte 2
                         .requestMatchers(HttpMethod.GET, "/itens").permitAll()
                         .requestMatchers(HttpMethod.GET, "/itens/novo").hasRole("ADMIN")
@@ -65,6 +70,13 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .defaultSuccessUrl("/itens", true)
                         .permitAll()
+                )
+                .oauth2Login(oauth -> oauth
+                        .loginPage("/login")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UsuarioService)
+                        )
+                        .defaultSuccessUrl("/itens", true)
                 )
                 .exceptionHandling(exception -> exception
                         .accessDeniedPage("/acesso-negado")
@@ -90,7 +102,7 @@ public class SecurityConfig {
                                 .policy(
                                         "camera=(), " +
                                         "microphone=(), " +
-                                        "geolocation=(), "
+                                        "geolocation=()"
                                 )
                         )
                 );
@@ -111,7 +123,7 @@ public class SecurityConfig {
             if (username.equals(adminUsername)) {
                 return user;
             } else {
-                return usuarioRepository.findByUsername(username)
+                return usuarioRepository.findByUsernameAndProvider(username, AuthProvider.LOCAL)
                         .map(usuario -> User.builder()
                                 .username(usuario.getUsername())
                                 .password(usuario.getSenha())
