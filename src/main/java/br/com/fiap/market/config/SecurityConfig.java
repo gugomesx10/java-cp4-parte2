@@ -15,6 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
@@ -80,6 +82,15 @@ public class SecurityConfig {
                                         "object-src 'none'; " +
                                         "base-uri 'self'; " +
                                         "frame-ancestors 'none'"
+                                )
+                        )
+                        .referrerPolicy(referrer -> referrer
+                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)
+                        ).permissionsPolicyHeader(permissions -> permissions
+                                .policy(
+                                        "camera=(), " +
+                                        "microphone=(), " +
+                                        "geolocation=(), "
                                 )
                         )
                 );
